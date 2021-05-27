@@ -1,7 +1,12 @@
 <template>
     <div class="nav-index">
         <div class="nav-menu">
-            <img :src="defaultIcon" alt="icon" class="nav-image" />
+            <!-- <img :src="defaultIcon" alt="icon" class="nav-image" /> -->
+            <el-image
+                class="nav-image"
+                :src="defaultIcon"
+                fit="cover"
+            ></el-image>
             <el-menu class="nav-el-menu">
                 <div v-for="(item, index) in navMenu" :key="index">
                     <el-submenu
@@ -83,7 +88,7 @@
                 </div>
             </div>
         </div>
-        <el-dialog title="提示" v-model="dialogVisible" width="30%">
+        <el-dialog title="提示" v-model="dialogVisible" width="30%" @close="dialogVisible = false">
             <el-form
                 :model="dialog.data"
                 :rules="dialogRules"
@@ -127,7 +132,7 @@
                         :on-exceed="handleExceed"
                         :file-list="fileList"
                     >
-                        <el-button>网站图标</el-button
+                        <el-button @click="getWebIcon">自动获取网站图标</el-button
                         ><!--
                     --><template #trigger>
                             <el-button @click="uploadIcon"
@@ -153,6 +158,8 @@
 import { defineComponent, reactive, ref, onMounted, onBeforeUnmount, toRaw, computed, watch } from "vue";
 import { ElForm } from 'element-plus';
 import defaultIcon from "@/assets/logo.png";
+import api from '../../service/nav';
+import _ from 'lodash';
 export default defineComponent({
     name: "nav",
     setup: () => {
@@ -264,6 +271,20 @@ export default defineComponent({
             });
             return arr;
         };
+        const getWebIcon = () => {
+            dialogDataRef.value?.validateField('name', async errMsg => {
+                if (errMsg) {
+                    console.log("校验未通过");
+                    return;
+                } else {
+                    console.log("校验通过");
+                    let url = dialog.data.url.split('/');
+                    let newUrl = url[0] + '//' + url[2];
+                    let res:any = await api.getWebIconApi({targetUrl: newUrl});
+                    dialog.data.icon = res.icon ? res.icon : newUrl + '/favicon.ico';
+                }
+            });
+        };
         const goToUrl = (item: any) => {
             item.url && (window.location.href = item.url);
         };
@@ -306,9 +327,9 @@ export default defineComponent({
             });
         };
         const openDialog = (type: string, item: any, parent: any) => {
-            dialog.data = toRaw(item);
-            dialog.type = type;
-            dialog.parent = toRaw(parent);
+            dialog.data = _.cloneDeep(item);
+            dialog.type = _.cloneDeep(type);
+            dialog.parent = _.cloneDeep(parent);
             dialogVisible.value = true;
         };
         const uploadIcon = () => {};
@@ -332,6 +353,8 @@ export default defineComponent({
             uploadIcon,
             dialog,
             dialogDataRef,
+            validateVal,
+            getWebIcon
         };
     },
 });
@@ -352,9 +375,9 @@ export default defineComponent({
         flex-direction: column;
         align-items: center;
         .nav-image {
-            width: 65%;
-            height: 10%;
-            margin-bottom: 75px;
+            width: 68px; 
+            height: 68px;
+            margin-bottom: 25px;
         }
         .nav-el-menu {
             border: none;
@@ -365,6 +388,15 @@ export default defineComponent({
         .menu-children {
             .el-menu-item {
                 padding-left: 70px !important;
+            }
+        }
+        .el-submenu__title{
+            &:after{
+                content: "";
+                display: none;
+            }
+            &:hover:after{
+                display: block;
             }
         }
     }
