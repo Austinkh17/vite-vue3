@@ -160,10 +160,29 @@ import { ElForm } from 'element-plus';
 import defaultIcon from "@/assets/logo.png";
 import api from '../../service/nav';
 import _ from 'lodash';
+
+interface NavMenu{
+    name: string,
+    id?: string,
+    list?: NavList[],
+    children: NavMenu[]
+}
+interface NavList{
+    name: string,
+    desc: string,
+    icon: string,
+    url: string 
+}
+interface Dialog{
+    data: NavList,
+    type: string,
+    parent?: NavMenu
+}
+
 export default defineComponent({
     name: "nav",
     setup: () => {
-        //  刷新页面
+        //  刷新页面,导航菜单保存到localStorage
         const beforeunloadFn = () => {
             localStorage.setItem('navMenu', JSON.stringify(navMenu));
         };
@@ -227,15 +246,15 @@ export default defineComponent({
             },
             { name: "网站2", id: "web2", list: [] },
         ];
-        let navMenu: any = reactive([]);
+        let navMenu = reactive<NavMenu[]>([]);
         let getNavMenu = localStorage.getItem('navMenu');
         navMenu = (getNavMenu && JSON.parse(getNavMenu).length) ? JSON.parse(getNavMenu) : navMenuDefault;
         window.addEventListener('beforeunload', beforeunloadFn, false);
         onBeforeUnmount(() => {
             window.removeEventListener('beforeunload', beforeunloadFn, false); 
         });
-        let dialogVisible: any = ref(false);
-        let dialogRules: any = reactive({
+        let dialogVisible = ref<boolean>(false);
+        let dialogRules = reactive({
             name: [
                 { required: true, message: "请输入网站名称", trigger: "blur" },
                 {
@@ -260,17 +279,19 @@ export default defineComponent({
                 { required: true, message: "请上传网站图标", trigger: "blur" },
             ],
         });
-        let dialog: any = reactive({data: {}, type: '', parent: {}});
+        let dialog = reactive<Dialog>({data: {name: '', desc: '', icon: '', url: ''}, type: '', parent: {name: '', children: []}});
+        //  根据导航菜单合成导航列表
         const navList = computed(() => {
             return navMenu.length ? navMenuForEach(navMenu, []) : [];
         });
-        const navMenuForEach = (item: any, arr: Array<[]>) => {
-            item.forEach((v:any) => {
+        const navMenuForEach = (item: NavMenu[], arr: NavMenu[]) => {
+            item.forEach((v: NavMenu) => {
                 v.list && arr.push(v);
                 v.children && (arr = navMenuForEach(v.children, arr));
             });
             return arr;
         };
+        //  根据网址去获取网站图标
         const getWebIcon = () => {
             dialogDataRef.value?.validateField('name', async errMsg => {
                 if (errMsg) {
@@ -285,20 +306,20 @@ export default defineComponent({
                 }
             });
         };
-        const goToUrl = (item: any) => {
+        const goToUrl = (item: NavList) => {
             item.url && (window.location.href = item.url);
         };
-        const goToNavList = (item: any) => {
+        const goToNavList = (item: NavMenu) => {
             let id = "#" + item.id;
             document.querySelector(id)?.scrollIntoView({ behavior: "smooth" });
         };
         const dialogDataRef = ref<InstanceType<typeof ElForm>>();
-        const changeNavMenu = (item: any) => {
+        const changeNavMenu = (item: NavMenu) => {
             if (dialog.type == "addNav") {
                 item.list ? item.list.push(dialog.data) : (item.list = [dialog.data]);
             } else if (dialog.type == "editNav") {
-                let index = item.list.findIndex((item:any) => item.name === dialog.data.name);
-                item.list.splice(index, 1, dialog.data);
+                let index = item?.list?.findIndex((item:any) => item.name === dialog.data.name);
+                index && index > -1 && item?.list?.splice(index, 1, dialog.data);
             } else if (dialog.type == "addDir") {
             }
         };
@@ -353,7 +374,6 @@ export default defineComponent({
             uploadIcon,
             dialog,
             dialogDataRef,
-            validateVal,
             getWebIcon
         };
     },
