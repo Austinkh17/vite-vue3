@@ -318,7 +318,7 @@ export default defineComponent({
             if (dialog.type == "addNav") {
                 item.list ? item.list.push(dialog.data) : (item.list = [dialog.data]);
             } else if (dialog.type == "editNav") {
-                let index = item?.list?.findIndex((item:any) => item.name === dialog.data.name);
+                let index = item?.list?.findIndex((item:NavList) => item.name === dialog.data.name);
                 index && index > -1 && item?.list?.splice(index, 1, dialog.data);
             } else if (dialog.type == "addDir") {
             }
